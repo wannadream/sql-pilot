@@ -1,0 +1,39 @@
+﻿@page "/catalogs"
+
+@using Microsoft.SqlServer.Management.IntegrationServices;
+@using SQL_Pilot.Data
+@inject DialogService DialogService
+@inject SqlIntegrationServicesCatalogService CatalogService
+
+<h1>Integration Services Catalogs</h1>
+
+@if (catalogs == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <RadzenDataGrid AllowFiltering="true" AllowColumnResize="true" FilterMode="FilterMode.Advanced" AllowSorting="true" PageSize="25" AllowPaging="true" PagerHorizontalAlign="HorizontalAlign.Left" ShowPagingSummary="true"
+                Data="@catalogs" TItem="Catalog" ColumnWidth="300px" LogicalFilterOperator="LogicalFilterOperator.Or">
+        <Columns>
+            <RadzenDataGridColumn TItem="Catalog" Property="Name" Title="Name" />
+        </Columns>
+    </RadzenDataGrid>
+}
+
+@code {
+    private Catalog[] catalogs;
+
+    protected override async Task OnInitializedAsync()
+    {
+        catalogs = await CatalogService.GetCatalogs();
+    }
+
+    //protected async Task OnDataGridRowClick(DataGridRowMouseEventArgs<Job> arg)
+    //{
+    //    Job job = arg.Data;
+    //    await DialogService.OpenAsync<SqlAgentJobDetail>(job.Name,
+    //           new Dictionary<string, object>() { { "job", job } },
+    //           new DialogOptions() { Width = "70%", Height = "720px", Resizable = true, Draggable = true });
+    //}
+}

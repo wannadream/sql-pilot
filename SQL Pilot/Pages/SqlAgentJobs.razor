@@ -1,0 +1,87 @@
+﻿@page "/sqlagentjobs"
+
+@using Microsoft.SqlServer.Management.Smo.Agent;
+@using SQL_Pilot.Data
+@inject DialogService DialogService
+@inject SqlAgentJobService JobService
+
+<h1>SQL Agent Jobs</h1>
+
+@if (jobs == null)
+{
+    <RadzenProgressBar Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+}
+else
+{
+    <RadzenDataGrid AllowFiltering="true" AllowColumnResize="true" FilterMode="FilterMode.Advanced" AllowSorting="true" PageSize="25" AllowPaging="true" PagerHorizontalAlign="HorizontalAlign.Left" ShowPagingSummary="true"
+                Data="@jobs" TItem="Job" ColumnWidth="300px" LogicalFilterOperator="LogicalFilterOperator.Or" RowClick=@OnDataGridRowClick>
+        <Columns>
+            <RadzenDataGridColumn TItem="Job" Property="Enabled" Title="Enabled" Width="116px" TextAlign="TextAlign.Center">
+                <Template Context="data">
+                    @if (data.IsEnabled)
+                    {
+                        <span class="oi oi-circle-check"></span>
+                    }
+                    else
+                    {
+                        <span class="oi oi-circle-x"></span>
+                    }
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="Job" Property="Name" Title="Name">
+                <Template Context="data">
+                    <span title="@data.Description">@data.Name</span>
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="Job" Property="Category" Title="Category" />
+            <RadzenDataGridColumn TItem="Job" Property="LastRunDate" Title="Last Run" />
+            <RadzenDataGridColumn TItem="Job" Property="LastRunOutcome" Title="Last Run Outcome">
+                <Template Context="data">
+                    @{
+                        string outcome = data.LastRunOutcome.ToString();
+                        if (outcome == "Failed")
+                        {
+                            <span class="label label-danger">@outcome</span>
+                        }
+                        else if (outcome == "Succeeded")
+                        {
+                            <span class="label label-success">@outcome</span>
+                        }
+                        else if (outcome == "Cancelled")
+                        {
+                            <span class="label label-warning">@outcome</span>
+                        }
+                        else if (outcome == "InProgress")
+                        {
+                            <span class="label label-info">@outcome</span>
+                        }
+                        else if (outcome == "Unknown")
+                        {
+                            <span class="label label-default">@outcome</span>
+                        }
+                    }
+                </Template>
+            </RadzenDataGridColumn>
+        </Columns>
+    </RadzenDataGrid>
+}
+
+@code {
+    private Job[] jobs;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.Run(() =>
+        {
+            jobs = JobService.GetJobs();
+        });
+    }
+
+    protected async Task OnDataGridRowClick(DataGridRowMouseEventArgs<Job> arg)
+    {
+        Job job = arg.Data;
+        await DialogService.OpenAsync<SqlAgentJobDetail>(job.Name,
+               new Dictionary<string, object>() { { "job", job } },
+               new DialogOptions() { Width = "70%", Height = "720px", Resizable = true, Draggable = true });
+    }
+}

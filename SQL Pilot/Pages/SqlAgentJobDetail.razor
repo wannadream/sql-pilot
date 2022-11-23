@@ -1,0 +1,114 @@
+﻿@inject DialogService DialogService
+@using Microsoft.SqlServer.Management.Smo.Agent
+@using SQL_Pilot.Data
+@using System.Data
+
+<div class="row my-4">
+    <div class="col-md-12">
+        <RadzenCard>
+            <h3 class="h5">Description</h3>
+            <div class="d-flex flex-row">
+                @Job.Description
+            </div>
+        </RadzenCard>
+    </div>
+</div>
+<div class="row my-4">
+    <div class="col-md-12">
+        <RadzenCard>
+            <h3 class="h5">Overall Performance</h3>
+            @if (runDurations == null)
+            {
+                <RadzenProgressBar Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+            }
+            else
+            {
+                <div class="row">
+                    <div class="col">
+                        <RadzenChart>
+                            <RadzenLineSeries Data=@runDurations Title=@SqlServer.ServerName CategoryProperty="Date" LineType="LineType.Solid" ValueProperty="DurationInSeconds">
+                                <RadzenMarkers MarkerType="MarkerType.Square" />
+                            </RadzenLineSeries>
+                            <RadzenValueAxis Formatter="@FormatDuration">
+                                <RadzenGridLines Visible="true" />
+                                <RadzenAxisTitle Text="Run Duration" />
+                            </RadzenValueAxis>
+                        </RadzenChart>
+                    </div>
+                </div>
+            }
+        </RadzenCard>
+    </div>
+</div>
+<div class="row my-4">
+    <div class="col-md-12">
+        <RadzenCard>
+            <h3 class="h5">
+                Histories
+            </h3>
+            @if (histories == null)
+            {
+                <RadzenProgressBar Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+            }
+            else
+            {
+                <RadzenDataGrid AllowFiltering="true" AllowPaging="true" AllowSorting="true" Data=@histories TItem="SqlJobHistory" ColumnWidth="200px" Class="mt-3">
+                    <Columns>
+                        <RadzenDataGridColumn TItem="SqlJobHistory" Property="InstanceId" Title="Instance Id" />
+                        <RadzenDataGridColumn TItem="SqlJobHistory" Property="Message" Title="Message" />
+                        <RadzenDataGridColumn TItem="SqlJobHistory" Property="StepName" Title="Step Name" />
+                        <RadzenDataGridColumn TItem="SqlJobHistory" Property="RunDurationDislplay" Title="Run Duration" />
+                        <RadzenDataGridColumn TItem="SqlJobHistory" Property="RunTime" Title="Run Time" />
+                    </Columns>
+                </RadzenDataGrid>
+            }
+        </RadzenCard>
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-12 text-right">
+        <RadzenButton Click="@((args) => DialogService.Close(true))" Text="OK" Style="width: 120px" Disabled="histories == null && runDurations == null" />
+    </div>
+</div>
+
+@code {
+    [Parameter] public Job Job { get; set; }
+
+    private IEnumerable<SqlJobHistory> histories;
+
+    private JobRunDurationDataItem[] runDurations;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.Run(() =>
+        {
+            histories = Job.EnumHistory().Rows.Cast<DataRow>().Select(row => new SqlJobHistory
+                {
+                    InstanceId = int.Parse(row[0].ToString()),
+                    Message = row[2].ToString(),
+                    StepId = int.Parse(row[3].ToString()),
+                    StepName = row[4].ToString(),
+                    RunDuration = int.Parse(row[10].ToString()),
+                    RunTime = DateTime.Parse(row[9].ToString())
+                }).OrderByDescending(his => his.RunTime);
+
+            runDurations = histories.Where(his => his.StepName.Contains("Job outcome"))
+                        .GroupBy(his => his.RunTime.ToString("MM/dd/yy"))
+                        .Take(10)
+                        .Select(his => new JobRunDurationDataItem
+                            {
+                                Date = his.First().RunTime.ToString("MM/dd/yy"),
+                                DurationInSeconds = his.First().RunDurationInSeconds
+                            }).ToArray();
+        });
+    }
+
+    private string FormatDuration(object value)
+    {
+        TimeSpan ts = TimeSpan.FromSeconds((double)value);
+        string displayDuration = $"{ts.Seconds}s";
+        if (ts.Minutes > 0) displayDuration = $"{ts.Minutes}m " + displayDuration;
+        if (ts.Hours > 0) displayDuration = $"{ts.Hours}h " + displayDuration;
+        return displayDuration;
+    }
+}
