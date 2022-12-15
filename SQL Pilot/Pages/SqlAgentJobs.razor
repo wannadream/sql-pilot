@@ -13,8 +13,9 @@
 }
 else
 {
-    <RadzenDataGrid AllowFiltering="true" AllowColumnResize="true" FilterMode="FilterMode.Advanced" AllowSorting="true" PageSize="25" AllowPaging="true" PagerHorizontalAlign="HorizontalAlign.Left" ShowPagingSummary="true"
-                Data="@jobs" TItem="Job" ColumnWidth="300px" LogicalFilterOperator="LogicalFilterOperator.Or" RowClick=@OnDataGridRowClick>
+    <RadzenDataGrid AllowFiltering="true" AllowColumnResize="true" FilterMode="FilterMode.Advanced" AllowSorting="true" PageSize="25" AllowPaging="true"
+                PagerHorizontalAlign="HorizontalAlign.Left" ShowPagingSummary="true" Data="@jobs" TItem="Job" ColumnWidth="300px" LogicalFilterOperator="LogicalFilterOperator.Or"
+                RowClick=@OnDataGridRowClick SelectionMode="DataGridSelectionMode.Single" @bind-Value=@selectedJobs>
         <Columns>
             <RadzenDataGridColumn TItem="Job" Property="Enabled" Title="Enabled" Width="116px" TextAlign="TextAlign.Center">
                 <Template Context="data">
@@ -68,6 +69,7 @@ else
 
 @code {
     private Job[] jobs;
+    private IList<Job> selectedJobs;
 
     protected override async Task OnInitializedAsync()
     {
@@ -77,10 +79,10 @@ else
         });
     }
 
-    protected async Task OnDataGridRowClick(DataGridRowMouseEventArgs<Job> arg)
+    protected void OnDataGridRowClick(DataGridRowMouseEventArgs<Job> arg)
     {
         Job job = arg.Data;
-        await DialogService.OpenAsync<SqlAgentJobDetail>(job.Name,
+        DialogService.Open<SqlAgentJobDetail>(job.Name,
                new Dictionary<string, object>() { { "job", job } },
                new DialogOptions() { Width = "70%", Height = "720px", Resizable = true, Draggable = true });
     }
